@@ -403,9 +403,9 @@ function EquipmentDetailsContent() {
     }
 
     if (!/^[+()\-\s\d]{7,20}$/.test(contactNumber.trim())) {
-      setBookingError("Please enter a valid contact number.");
-      return;
-    }
+  setBookingError("Please enter a valid contact number.");
+  return;
+}
 
     if (!deliveryAddress.trim()) {
       setBookingError("Please enter your delivery address.");
