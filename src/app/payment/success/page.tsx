@@ -2,18 +2,32 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { CheckCircle2, Clock, Loader2, Package } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  CheckCircle2,
+  Clock,
+  Loader2,
+  Package,
+  AlertCircle,
+} from "lucide-react";
+
 import { useAuth } from "@/contexts/auth-context";
 import api from "@/lib/api";
 
-export default function PaymentSuccessPage() {
+function PaymentSuccessContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const { user, loading: authLoading } = useAuth();
+
+  const sessionId = searchParams.get("session_id");
 
   const [checking, setChecking] = useState(true);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [statusMessage, setStatusMessage] = useState(
+    "Checking your payment..."
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -26,23 +40,57 @@ export default function PaymentSuccessPage() {
     let active = true;
 
     const checkPayment = async () => {
-      try {
-        const response = await api.get("/bookings/my-bookings");
-        const bookings = response.data.bookings || [];
+      if (!sessionId) {
+        setStatusMessage("Payment session ID was not found.");
+        setChecking(false);
+        return;
+      }
 
-        // Stripe's webhook updates the booking after successful payment.
-        const paidBooking = bookings.some(
-          (booking: {
-            paymentStatus?: string;
-            status?: string;
-          }) => booking.paymentStatus === "paid"
-        );
+      try {
+        // Retry because Stripe webhook processing may take a few seconds.
+        for (let attempt = 0; attempt < 12; attempt++) {
+          if (!active) return;
+
+          try {
+            const response = await api.get(
+              `/payments/status/${encodeURIComponent(sessionId)}`
+            );
+
+            if (response.data.paymentConfirmed === true) {
+              if (active) {
+                setPaymentConfirmed(true);
+                setStatusMessage("Your payment has been confirmed.");
+              }
+
+              return;
+            }
+
+            if (
+              response.data.checkoutStatus === "expired" ||
+              response.data.stripePaymentStatus === "unpaid" &&
+                response.data.checkoutStatus === "complete"
+            ) {
+              if (active) {
+                setStatusMessage(
+                  "Your payment has not been completed."
+                );
+              }
+
+              return;
+            }
+          } catch (error) {
+            console.error("Payment status check failed:", error);
+          }
+
+          // Wait 2 seconds before checking again.
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
 
         if (active) {
-          setPaymentConfirmed(paidBooking);
+          setStatusMessage(
+            "Your payment is still being processed. Please check your bookings shortly."
+          );
         }
-      } catch (error) {
-        console.error("Payment status check failed:", error);
       } finally {
         if (active) {
           setChecking(false);
@@ -55,15 +103,16 @@ export default function PaymentSuccessPage() {
     return () => {
       active = false;
     };
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, sessionId]);
 
-  if (authLoading || checking) {
+  if (authLoading || (checking && user)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-base-200 px-4">
         <div className="text-center">
           <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+
           <p className="mt-4 font-semibold">
-            Checking your payment...
+            {statusMessage}
           </p>
         </div>
       </main>
@@ -86,24 +135,28 @@ export default function PaymentSuccessPage() {
             </h1>
 
             <p className="mt-4 leading-7 text-base-content/60">
-              Your payment has been confirmed. You can view your
-              rental details in your customer dashboard.
+              Your payment has been confirmed successfully.
+              Your equipment booking is now confirmed.
             </p>
           </>
         ) : (
           <>
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-warning/10 text-warning">
-              <Clock size={46} />
+              {sessionId ? (
+                <Clock size={46} />
+              ) : (
+                <AlertCircle size={46} />
+              )}
             </div>
 
             <h1 className="mt-6 text-3xl font-black">
-              Payment Processing
+              {sessionId
+                ? "Payment Processing"
+                : "Payment Session Not Found"}
             </h1>
 
             <p className="mt-4 leading-7 text-base-content/60">
-              Your checkout has returned successfully, but payment
-              confirmation has not reached our server yet. Please
-              check your bookings again shortly.
+              {statusMessage}
             </p>
           </>
         )}
@@ -124,5 +177,19 @@ export default function PaymentSuccessPage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+export default function PaymentSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-base-200">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </main>
+      }
+    >
+      <PaymentSuccessContent />
+    </Suspense>
   );
 }
