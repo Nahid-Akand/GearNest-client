@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -52,17 +52,21 @@ const categories = [
 
 const categoryDescriptions: Record<string, string> = {
   All: "Explore quality equipment for every project, occasion and adventure.",
-  Construction: "Find reliable tools and machinery for your next construction project.",
-  Photography: "Discover cameras, lenses and professional photography equipment.",
+  Construction:
+    "Find reliable tools and machinery for your next construction project.",
+  Photography:
+    "Discover cameras, lenses and professional photography equipment.",
   "Vehicles & Transportation":
     "Find dependable transportation for business, travel and everyday needs.",
   "Agriculture Equipment":
     "Explore farming machinery and equipment for agricultural work.",
-  Electronics: "Rent modern electronics and technology for work and entertainment.",
-  "Event Equipment": "Everything you need to create memorable events and celebrations.",
+  Electronics:
+    "Rent modern electronics and technology for work and entertainment.",
+  "Event Equipment":
+    "Everything you need to create memorable events and celebrations.",
 };
 
-export default function EquipmentPage() {
+function EquipmentContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -121,7 +125,7 @@ export default function EquipmentPage() {
       }
     };
 
-    fetchEquipment();
+    void fetchEquipment();
 
     return () => controller.abort();
   }, [search, category, sort]);
@@ -173,7 +177,6 @@ export default function EquipmentPage() {
 
   return (
     <main className="min-h-screen bg-[#f8fafc] text-slate-900">
-
       {/* Premium Hero */}
       <section className="relative isolate overflow-hidden bg-[#101c2c]">
         <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-emerald-400/10 blur-3xl" />
@@ -219,16 +222,19 @@ export default function EquipmentPage() {
 
       {/* Main Content */}
       <section className="mx-auto max-w-7xl px-5 py-12 md:px-8 md:py-16">
-
         {/* Breadcrumb */}
         <div className="mb-8 flex flex-wrap items-center gap-2 text-sm text-slate-500">
           <Link href="/" className="transition hover:text-emerald-600">
             Home
           </Link>
           <span>/</span>
-          <Link href="/equipment" className="transition hover:text-emerald-600">
+          <Link
+            href="/equipment"
+            className="transition hover:text-emerald-600"
+          >
             Equipment
           </Link>
+
           {category !== "All" && (
             <>
               <span>/</span>
@@ -333,6 +339,7 @@ export default function EquipmentPage() {
               <span className="text-xs font-semibold text-slate-500">
                 Active filter:
               </span>
+
               <button
                 onClick={() => updateCategory("All")}
                 className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
@@ -350,13 +357,17 @@ export default function EquipmentPage() {
             <p className="text-sm font-semibold text-emerald-600">
               OUR COLLECTION
             </p>
+
             <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
               {category === "All" ? "Available Equipment" : category}
             </h2>
+
             <p className="mt-2 text-sm text-slate-500">
               {loading
                 ? "Finding the best equipment for you..."
-                : `${equipment.length} equipment ${equipment.length === 1 ? "item" : "items"} found`}
+                : `${equipment.length} equipment ${
+                    equipment.length === 1 ? "item" : "items"
+                  } found`}
             </p>
           </div>
 
@@ -387,10 +398,13 @@ export default function EquipmentPage() {
         ) : error ? (
           <div className="rounded-3xl border border-red-100 bg-white px-6 py-20 text-center shadow-sm">
             <Package size={46} className="mx-auto text-red-400" />
+
             <h3 className="mt-5 text-xl font-bold text-slate-900">
               Something went wrong
             </h3>
+
             <p className="mt-2 text-sm text-slate-500">{error}</p>
+
             <button
               onClick={() => window.location.reload()}
               className="mt-6 rounded-xl bg-[#101c2c] px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
@@ -409,8 +423,8 @@ export default function EquipmentPage() {
             </h3>
 
             <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500">
-              We couldn't find any equipment matching your current filters.
-              Try another category or search term.
+              We couldn&apos;t find any equipment matching your current
+              filters. Try another category or search term.
             </p>
 
             <button
@@ -445,7 +459,7 @@ export default function EquipmentPage() {
                     </div>
                   )}
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-black/10" />
 
                   <span className="absolute left-4 top-4 rounded-full border border-white/30 bg-white/90 px-3 py-1.5 text-xs font-bold text-slate-800 backdrop-blur">
                     {item.category}
@@ -461,6 +475,7 @@ export default function EquipmentPage() {
                         {item.brand}
                       </p>
                     )}
+
                     <p className="mt-1 text-lg font-bold drop-shadow">
                       {item.name}
                     </p>
@@ -478,6 +493,7 @@ export default function EquipmentPage() {
                       <p className="text-xl font-black text-emerald-600">
                         ৳{item.pricePerDay.toLocaleString("en-BD")}
                       </p>
+
                       <p className="text-xs text-slate-400">per day</p>
                     </div>
                   </div>
@@ -508,5 +524,19 @@ export default function EquipmentPage() {
         )}
       </section>
     </main>
+  );
+}
+
+export default function EquipmentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      }
+    >
+      <EquipmentContent />
+    </Suspense>
   );
 }
