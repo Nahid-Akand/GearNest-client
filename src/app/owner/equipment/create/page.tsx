@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -61,6 +61,18 @@ export default function CreateEquipmentPage() {
   const [rentalTypes, setRentalTypes] = useState<RentalType[]>(["daily"]);
   const [images, setImages] = useState<string[]>([""]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Redirect unauthorized users
+  useEffect(() => {
+    if (!authLoading && (!user || user.role !== "owner")) {
+      router.replace("/login");
+    }
+  }, [authLoading, user, router]);
+
+  // Wait until authentication is checked
+  if (authLoading || !user || user.role !== "owner") {
+    return null;
+  }
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -222,9 +234,8 @@ export default function CreateEquipmentPage() {
   }
 
   if (!user) {
-    router.replace("/login");
-    return null;
-  }
+  return null;
+}
 
   if (user.role !== "owner") {
     router.replace(
