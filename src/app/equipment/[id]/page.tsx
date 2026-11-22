@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Image from "next/image";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -134,34 +134,34 @@ function EquipmentDetailsContent() {
   // FETCH FAVORITE STATUS
   // ============================================
 
-  const fetchFavoriteStatus = async () => {
-    if (user?.role !== "customer") return;
+  const fetchFavoriteStatus = useCallback(async () => {
+  if (user?.role !== "customer") return;
 
-    try {
-      const response = await api.get("/favorites");
+  try {
+    const response = await api.get("/favorites");
 
-      const favoriteItems: FavoriteItem[] =
-        response.data.favorites ??
-        response.data.data ??
-        [];
+    const favoriteItems: FavoriteItem[] =
+      response.data.favorites ??
+      response.data.data ??
+      [];
 
-      const found = favoriteItems.some((item) => {
-        const equipmentReference =
-          item.equipment ?? item.equipmentId;
+    const found = favoriteItems.some((item) => {
+      const equipmentReference =
+        item.equipment ?? item.equipmentId;
 
-        const favoriteEquipmentId =
-          typeof equipmentReference === "string"
-            ? equipmentReference
-            : equipmentReference?._id;
+      const favoriteEquipmentId =
+        typeof equipmentReference === "string"
+          ? equipmentReference
+          : equipmentReference?._id;
 
-        return String(favoriteEquipmentId) === String(id);
-      });
+      return String(favoriteEquipmentId) === String(id);
+    });
 
-      setIsFavorite(found);
-    } catch (err) {
-      console.error("Favorite status error:", err);
-    }
-  };
+    setIsFavorite(found);
+  } catch (err) {
+    console.error("Favorite status error:", err);
+  }
+}, [user?.role, id]);
 
   // ============================================
   // FETCH EQUIPMENT DETAILS
@@ -201,17 +201,55 @@ function EquipmentDetailsContent() {
   // ============================================
   // LOAD FAVORITE STATUS
   // ============================================
+useEffect(() => {
+  if (
+    authLoading ||
+    !isAuthenticated ||
+    user?.role !== "customer" ||
+    !id
+  ) {
+    return;
+  }
 
-  useEffect(() => {
-    if (
-      !authLoading &&
-      isAuthenticated &&
-      user?.role === "customer" &&
-      id
-    ) {
-      void fetchFavoriteStatus();
+  let cancelled = false;
+
+  const loadFavoriteStatus = async () => {
+    try {
+      const response = await api.get("/favorites");
+
+      const favoriteItems: FavoriteItem[] =
+        response.data.favorites ??
+        response.data.data ??
+        [];
+
+      const found = favoriteItems.some((item) => {
+        const equipmentReference =
+          item.equipment ?? item.equipmentId;
+
+        const favoriteEquipmentId =
+          typeof equipmentReference === "string"
+            ? equipmentReference
+            : equipmentReference?._id;
+
+        return String(favoriteEquipmentId) === String(id);
+      });
+
+      if (!cancelled) {
+        setIsFavorite(found);
+      }
+    } catch (err) {
+      if (!cancelled) {
+        console.error("Favorite status error:", err);
+      }
     }
-  }, [authLoading, isAuthenticated, user?.role, id]);
+  };
+
+  void loadFavoriteStatus();
+
+  return () => {
+    cancelled = true;
+  };
+}, [authLoading, isAuthenticated, user?.role, id]);
 
   // ============================================
   // TOGGLE FAVORITES
