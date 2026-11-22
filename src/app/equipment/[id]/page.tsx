@@ -26,7 +26,6 @@ import {
   UserRound,
   FileText,
   Boxes,
-  Star,
 } from "lucide-react";
 
 interface EquipmentOwner {
@@ -100,7 +99,7 @@ const getToday = () => {
 const formatPrice = (price: number) =>
   Number(price || 0).toLocaleString("en-BD");
 
-function EquipmentDetailsContent()  {
+function EquipmentDetailsContent() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -115,9 +114,15 @@ function EquipmentDetailsContent()  {
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [favoriteMessage, setFavoriteMessage] = useState("");
 
+  // Booking modal states
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [quantity, setQuantity] = useState(1);
+  const [contactNumber, setContactNumber] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
+
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState("");
@@ -125,7 +130,10 @@ function EquipmentDetailsContent()  {
 
   const isCustomer = user?.role === "customer";
 
-  // Check whether the equipment is already in the customer's favorites.
+  // ============================================
+  // FETCH FAVORITE STATUS
+  // ============================================
+
   const fetchFavoriteStatus = async () => {
     if (user?.role !== "customer") return;
 
@@ -155,7 +163,10 @@ function EquipmentDetailsContent()  {
     }
   };
 
-  // Fetch equipment details after authentication is checked.
+  // ============================================
+  // FETCH EQUIPMENT DETAILS
+  // ============================================
+
   useEffect(() => {
     if (authLoading) return;
 
@@ -178,7 +189,6 @@ function EquipmentDetailsContent()  {
         setEquipment(response.data.equipment);
       } catch (err) {
         console.error("Equipment details error:", err);
-
         setError("Unable to load equipment details.");
       } finally {
         setLoading(false);
@@ -188,14 +198,25 @@ function EquipmentDetailsContent()  {
     void fetchEquipment();
   }, [id, authLoading, isAuthenticated, router]);
 
-  // Load favorite status for customers.
+  // ============================================
+  // LOAD FAVORITE STATUS
+  // ============================================
+
   useEffect(() => {
-    if (!authLoading && isAuthenticated && user?.role === "customer" && id) {
+    if (
+      !authLoading &&
+      isAuthenticated &&
+      user?.role === "customer" &&
+      id
+    ) {
       void fetchFavoriteStatus();
     }
   }, [authLoading, isAuthenticated, user?.role, id]);
 
-  // Add or remove equipment from favorites.
+  // ============================================
+  // TOGGLE FAVORITES
+  // ============================================
+
   const handleToggleFavorite = async () => {
     if (!isAuthenticated) {
       router.push("/login");
@@ -243,7 +264,10 @@ function EquipmentDetailsContent()  {
     }
   };
 
-  // Calculate rental duration in days.
+  // ============================================
+  // RENTAL DURATION AND PRICE
+  // ============================================
+
   const rentalDays =
     startDate && endDate
       ? Math.max(
@@ -256,12 +280,14 @@ function EquipmentDetailsContent()  {
         )
       : 0;
 
-  // Current booking API uses daily pricing.
   const totalPrice = equipment
-    ? rentalDays * equipment.pricePerDay
+    ? rentalDays * equipment.pricePerDay * quantity
     : 0;
 
-  // Open booking modal.
+  // ============================================
+  // OPEN BOOKING MODAL
+  // ============================================
+
   const handleOpenBooking = () => {
     if (!isAuthenticated) {
       router.push("/login");
@@ -270,17 +296,31 @@ function EquipmentDetailsContent()  {
 
     if (!isCustomer) return;
 
-    if (!equipment?.isAvailable) return;
+    if (
+      !equipment?.isAvailable ||
+      (equipment.availableQuantity ?? 1) <= 0
+    ) {
+      return;
+    }
 
     setBookingError("");
     setBookingSuccess("");
     setBookingId("");
+
     setStartDate("");
     setEndDate("");
+    setQuantity(1);
+    setContactNumber("");
+    setDeliveryAddress("");
+    setAdditionalNotes("");
+
     setShowBookingModal(true);
   };
 
-  // Start Stripe Checkout for an existing booking.
+  // ============================================
+  // START STRIPE CHECKOUT
+  // ============================================
+
   const handleCheckout = async (currentBookingId: string) => {
     try {
       setBookingLoading(true);
@@ -329,7 +369,10 @@ function EquipmentDetailsContent()  {
     }
   };
 
-  // Create booking and start Stripe Checkout.
+  // ============================================
+  // CREATE BOOKING AND START PAYMENT
+  // ============================================
+
   const handleCreateBooking = async (
     e: FormEvent<HTMLFormElement>
   ) => {
@@ -342,6 +385,30 @@ function EquipmentDetailsContent()  {
 
     if (new Date(endDate) <= new Date(startDate)) {
       setBookingError("End date must be after the start date.");
+      return;
+    }
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > (equipment.availableQuantity ?? 1)
+    ) {
+      setBookingError("Please select a valid equipment quantity.");
+      return;
+    }
+
+    if (!contactNumber.trim()) {
+      setBookingError("Please enter your contact number.");
+      return;
+    }
+
+    if (!/^[+()\-\s\d]{7,20}$/.test(contactNumber.trim())) {
+      setBookingError("Please enter a valid contact number.");
+      return;
+    }
+
+    if (!deliveryAddress.trim()) {
+      setBookingError("Please enter your delivery address.");
       return;
     }
 
@@ -359,12 +426,19 @@ function EquipmentDetailsContent()  {
         "/bookings",
         {
           equipmentId: equipment._id,
+
           startDate: new Date(
             `${startDate}T00:00:00`
           ).toISOString(),
+
           endDate: new Date(
             `${endDate}T00:00:00`
           ).toISOString(),
+
+          quantity,
+          contactNumber: contactNumber.trim(),
+          deliveryAddress: deliveryAddress.trim(),
+          additionalNotes: additionalNotes.trim(),
         }
       );
 
@@ -380,6 +454,7 @@ function EquipmentDetailsContent()  {
       }
 
       setBookingId(newBookingId);
+
       setBookingSuccess(
         "Your booking has been created. Continue to payment."
       );
@@ -430,7 +505,10 @@ function EquipmentDetailsContent()  {
     }
   };
 
-  // Authentication loading state.
+  // ============================================
+  // LOADING STATE
+  // ============================================
+
   if (authLoading || loading) {
     return (
       <main className="min-h-screen bg-[#f5f7fa] px-4 py-12">
@@ -453,16 +531,25 @@ function EquipmentDetailsContent()  {
     );
   }
 
-  // The user is being redirected to login.
+  // ============================================
+  // LOGIN REDIRECT STATE
+  // ============================================
+
   if (!isAuthenticated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f7fa]">
-        <Loader2 className="animate-spin text-emerald-600" size={35} />
+        <Loader2
+          className="animate-spin text-emerald-600"
+          size={35}
+        />
       </main>
     );
   }
 
-  // Error state.
+  // ============================================
+  // ERROR STATE
+  // ============================================
+
   if (error || !equipment) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f7fa] px-4">
@@ -477,7 +564,8 @@ function EquipmentDetailsContent()  {
           </h1>
 
           <p className="mt-3 text-sm leading-7 text-slate-500">
-            {error || "This equipment may no longer be available."}
+            {error ||
+              "This equipment may no longer be available."}
           </p>
 
           <Link
@@ -845,9 +933,8 @@ function EquipmentDetailsContent()  {
                 )}
 
                 <p className="mt-4 text-center text-xs leading-6 text-slate-400">
-                  Select your rental dates to calculate the estimated
-                  cost before payment. The current booking form uses
-                  daily pricing.
+                  Select your rental dates and quantity to calculate
+                  the estimated cost. The booking form uses daily pricing.
                 </p>
 
                 {/* Favorite button */}
@@ -863,7 +950,10 @@ function EquipmentDetailsContent()  {
                     }`}
                   >
                     {favoriteLoading ? (
-                      <Loader2 size={19} className="animate-spin" />
+                      <Loader2
+                        size={19}
+                        className="animate-spin"
+                      />
                     ) : (
                       <Heart
                         size={19}
@@ -965,7 +1055,10 @@ function EquipmentDetailsContent()  {
         </div>
       </section>
 
-      {/* Booking Modal */}
+      {/* ========================================
+          BOOKING MODAL
+      ======================================== */}
+
       {showBookingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#101c2c]/75 px-4 py-8 backdrop-blur-sm">
           <div className="relative my-auto w-full max-w-lg overflow-hidden rounded-[2rem] bg-white shadow-2xl">
@@ -991,11 +1084,11 @@ function EquipmentDetailsContent()  {
               </h2>
 
               <p className="relative mt-2 pr-8 text-sm leading-6 text-slate-300">
-                Select your rental period for {equipment.name}.
+                Enter your rental details for {equipment.name}.
               </p>
             </div>
 
-            <div className="p-6 md:p-8">
+            <div className="max-h-[70vh] overflow-y-auto p-6 md:p-8">
               {bookingSuccess ? (
                 <div className="py-5 text-center">
                   <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
@@ -1058,7 +1151,7 @@ function EquipmentDetailsContent()  {
                 </div>
               ) : (
                 <form onSubmit={handleCreateBooking}>
-                  {/* Start date */}
+                  {/* Rental start date */}
                   <div className="mb-5">
                     <label
                       htmlFor="startDate"
@@ -1088,8 +1181,8 @@ function EquipmentDetailsContent()  {
                     />
                   </div>
 
-                  {/* End date */}
-                  <div className="mb-6">
+                  {/* Rental end date */}
+                  <div className="mb-5">
                     <label
                       htmlFor="endDate"
                       className="mb-2 block text-sm font-bold text-[#101c2c]"
@@ -1128,6 +1221,112 @@ function EquipmentDetailsContent()  {
                     />
                   </div>
 
+                  {/* Required quantity */}
+                  <div className="mb-5">
+                    <label
+                      htmlFor="quantity"
+                      className="mb-2 block text-sm font-bold text-[#101c2c]"
+                    >
+                      Required Quantity
+                    </label>
+
+                    <input
+                      id="quantity"
+                      type="number"
+                      required
+                      min={1}
+                      max={availableQuantity}
+                      step={1}
+                      value={quantity}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        setQuantity(value);
+                        setBookingError("");
+                      }}
+                      className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-[#101c2c] outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                    />
+
+                    <p className="mt-2 text-xs text-slate-400">
+                      Maximum listed quantity: {availableQuantity} unit(s).
+                      Actual availability is checked when you submit.
+                    </p>
+                  </div>
+
+                  {/* Contact number */}
+                  <div className="mb-5">
+                    <label
+                      htmlFor="contactNumber"
+                      className="mb-2 block text-sm font-bold text-[#101c2c]"
+                    >
+                      Contact Number
+                    </label>
+
+                    <input
+                      id="contactNumber"
+                      type="tel"
+                      required
+                      minLength={7}
+                      maxLength={20}
+                      pattern="[+()\- 0-9]{7,20}"
+                      placeholder="Enter your contact number"
+                      value={contactNumber}
+                      onChange={(e) => {
+                        setContactNumber(e.target.value);
+                        setBookingError("");
+                      }}
+                      className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-[#101c2c] outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                    />
+                  </div>
+
+                  {/* Delivery address */}
+                  <div className="mb-5">
+                    <label
+                      htmlFor="deliveryAddress"
+                      className="mb-2 block text-sm font-bold text-[#101c2c]"
+                    >
+                      Delivery Address
+                    </label>
+
+                    <textarea
+                      id="deliveryAddress"
+                      required
+                      maxLength={500}
+                      rows={3}
+                      placeholder="Enter your complete delivery address"
+                      value={deliveryAddress}
+                      onChange={(e) => {
+                        setDeliveryAddress(e.target.value);
+                        setBookingError("");
+                      }}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#101c2c] outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                    />
+                  </div>
+
+                  {/* Additional notes */}
+                  <div className="mb-6">
+                    <label
+                      htmlFor="additionalNotes"
+                      className="mb-2 block text-sm font-bold text-[#101c2c]"
+                    >
+                      Additional Notes{" "}
+                      <span className="font-normal text-slate-400">
+                        (Optional)
+                      </span>
+                    </label>
+
+                    <textarea
+                      id="additionalNotes"
+                      maxLength={1000}
+                      rows={3}
+                      placeholder="Any special instructions for the equipment owner?"
+                      value={additionalNotes}
+                      onChange={(e) =>
+                        setAdditionalNotes(e.target.value)
+                      }
+                      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-[#101c2c] outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                    />
+                  </div>
+
                   {/* Rental summary */}
                   <div className="rounded-2xl border border-slate-200 bg-[#f5f7fa] p-5">
                     <div className="flex items-center justify-between text-sm">
@@ -1153,6 +1352,16 @@ function EquipmentDetailsContent()  {
                       </span>
                     </div>
 
+                    <div className="mt-3 flex items-center justify-between text-sm">
+                      <span className="text-slate-500">
+                        Required quantity
+                      </span>
+
+                      <span className="font-bold text-[#101c2c]">
+                        {quantity} unit(s)
+                      </span>
+                    </div>
+
                     <div className="my-4 border-t border-slate-200" />
 
                     <div className="flex items-center justify-between">
@@ -1164,6 +1373,10 @@ function EquipmentDetailsContent()  {
                         ৳{formatPrice(totalPrice)}
                       </span>
                     </div>
+
+                    <p className="mt-3 text-xs leading-5 text-slate-400">
+                      Final price is calculated and validated by the server.
+                    </p>
                   </div>
 
                   {/* Error message */}
@@ -1173,14 +1386,19 @@ function EquipmentDetailsContent()  {
                     </div>
                   )}
 
-                  {/* Submit */}
+                  {/* Submit button */}
                   <button
                     type="submit"
                     disabled={
                       bookingLoading ||
                       rentalDays <= 0 ||
                       !startDate ||
-                      !endDate
+                      !endDate ||
+                      !Number.isInteger(quantity) ||
+                      quantity < 1 ||
+                      quantity > availableQuantity ||
+                      !contactNumber.trim() ||
+                      !deliveryAddress.trim()
                     }
                     className="mt-6 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-black text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
                   >
@@ -1213,6 +1431,7 @@ function EquipmentDetailsContent()  {
     </main>
   );
 }
+
 export default function EquipmentDetailsPage() {
   return (
     <Suspense
