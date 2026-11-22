@@ -1,36 +1,184 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GearNest - Frontend Client
 
-## Getting Started
+GearNest is a modern equipment rental marketplace where customers can discover and rent equipment, owners can list and manage their equipment, and administrators can manage the platform.
 
-First, run the development server:
+This repository contains the frontend application built with Next.js and TypeScript.
+
+## Technologies Used
+
+- Next.js 16
+- React
+- TypeScript
+- Tailwind CSS
+- DaisyUI
+- Axios
+- Lucide React
+- Framer Motion
+- Recharts
+- React Hot Toast
+
+## Main Features
+
+### Authentication
+- User registration and login
+- JWT-based authentication
+- Google authentication
+- Protected routes
+- Role-based dashboard access
+
+### Public Pages
+- Home page
+- All Equipment page
+- Equipment details page
+- Search and filtering
+- Equipment sorting
+
+### Customer Dashboard
+- My Rentals
+- Favorites
+- Profile management
+
+### Owner Dashboard
+- Add Equipment
+- My Equipment
+- My Equipment Rental
+- Profile management
+
+### Admin Dashboard
+- Manage users
+- Manage equipment
+- Review equipment approval requests
+- Administrative management
+
+### Equipment Features
+- Equipment listing cards
+- Equipment details
+- Category filtering
+- Location search
+- Rental type selection
+- Price range filtering
+- Availability filtering
+
+### Booking and Payment
+- Equipment rental booking
+- Rental date selection
+- Booking information
+- Stripe Checkout
+- Payment success and status pages
+
+### User Profile
+- Update name
+- Update email where supported
+- Update profile image
+- Update phone number
+- Update address
+- Default cartoon profile image for new registrations
+
+### User Experience
+- Responsive design
+- Modern dashboard layouts
+- Loading states
+- Error handling
+- Toast notifications
+- Interactive UI components
+
+## Installation
+
+Clone the repository:
+
+```bash
+git clone YOUR_CLIENT_REPOSITORY_URL
+```
+
+Navigate to the frontend directory:
+
+```bash
+cd grernext-client
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+## Environment Variables
+
+Create a `.env.local` file in the frontend root directory.
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5001/api/v1
+```
+
+Add other public configuration variables only if required by your existing implementation.
+
+**Never put private API secrets in frontend environment variables.**
+
+## Run the Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the application:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Backend Connection
 
-## Learn More
+The frontend communicates with the GearNest backend through Axios.
 
-To learn more about Next.js, take a look at the following resources:
+Default local API URL:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```text
+http://localhost:5001/api/v1
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Configure `NEXT_PUBLIC_API_URL` when connecting to a deployed backend.
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+grernext-client/
+├── public/
+├── src/
+│   ├── app/
+│   │   ├── admin/
+│   │   ├── customer/
+│   │   ├── owner/
+│   │   ├── equipment/
+│   │   ├── dashboard/
+│   │   ├── login/
+│   │   └── register/
+│   ├── components/
+│   ├── contexts/
+│   ├── lib/
+│   └── types/
+├── .env.local
+├── .gitignore
+├── package.json
+├── tsconfig.json
+└── README.md
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The actual folder structure may vary depending on the implementation.
+
+## User Roles
+
+| Role | Dashboard |
+|---|---|
+| Customer | My Rentals, Favorites, Profile |
+| Owner | Add Equipment, My Equipment, My Equipment Rental, My Profile |
+| Admin | Administrative management |
+
+## Backend Repository
+
+The frontend connects to the GearNest backend API.
+
+Backend repository: Add your server GitHub repository URL here.
+
+## License
+
+This project was developed as an equipment rental marketplace project.
