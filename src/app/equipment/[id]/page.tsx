@@ -455,38 +455,17 @@ function EquipmentDetailsContent() {
 
       setBookingId(newBookingId);
 
-      setBookingSuccess(
-        "Your booking has been created. Continue to payment."
-      );
+     setBookingSuccess(
+  "Your booking has been created. Continue to payment."
+);
 
-      // Step 2: Create Stripe Checkout session.
-      const checkoutResponse =
-        await api.post<CheckoutResponse>(
-          "/payments/checkout",
-          {
-            bookingId: newBookingId,
-          }
-        );
+// Step 2: Redirect to Stripe Checkout.
+await handleCheckout(newBookingId);
+return;
+} catch (err: unknown) {
+  console.error("Booking or payment error:", err);
 
-      const checkoutUrl =
-        checkoutResponse.data.url ||
-        checkoutResponse.data.checkoutUrl ||
-        checkoutResponse.data.sessionUrl ||
-        checkoutResponse.data.session?.url;
-
-      if (!checkoutUrl) {
-        throw new Error(
-          checkoutResponse.data.message ||
-            "Booking created, but Stripe did not return a checkout URL."
-        );
-      }
-
-      // Step 3: Redirect to Stripe.
-      window.location.assign(checkoutUrl);
-    } catch (err: unknown) {
-      console.error("Booking or payment error:", err);
-
-      const error = err as {
+  const error = err as {
         response?: {
           data?: {
             message?: string;
